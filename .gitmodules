@@ -1,0 +1,3 @@
+[submodule "data_lab2"]
+	path = data_lab2
+	url = https://gist.github.com/d66a59b6db4e59c16efd4c42ad411f8e.git
