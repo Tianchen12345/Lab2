@@ -16,7 +16,8 @@ CREATE TABLE Cars(
 
 CREATE TABLE Judges(
 	Judge_ID TEXT,
-	Judge_Name TEXT
+	Judge_Name TEXT,
+	Timestamp DATETIME
 
 );
 
@@ -97,7 +98,7 @@ INSERT INTO Cars(Car_ID,Year,Make,Model,Name,Email) SELECT Car_ID, Year, Make, M
 
 DELETE FROM Cars WHERE Car_ID='Car_ID';
 
-INSERT INTO Judges(Judge_ID,Judge_Name) SELECT Judge_ID, Judge_Name FROM CSVData WHERE 1;
+INSERT INTO Judges(Judge_ID,Judge_Name, Timestamp) SELECT Judge_ID, Judge_Name, Timestamp FROM CSVData WHERE 1;
 
 DELETE FROM Judges WHERE Judge_ID='Judge_ID';
 
@@ -141,3 +142,45 @@ DROP TABLE CSVData;
 .mode csv
 .output extract1.csv
 SELECT * FROM Ranking;
+
+DROP TABLE IF EXISTS Top3;
+CREATE TABLE Top3(
+	Make TEXT,
+	Car_ID TEXT,
+	Total INT,
+	Rank INT
+);
+
+INSERT INTO Top3(Make,Car_ID,Total,Rank)SELECT Make,Car_ID,Total,Rank FROM Ranking;
+.headers ON
+.mode csv
+.output extract2.csv
+SELECT * FROM Top3;
+
+.headers ON
+.mode csv
+.output extract3.csv
+
+DROP TABLE IF EXISTS JudgesUpdate;
+CREATE TABLE JudgesUpdate(
+	Judge_ID TEXT,
+	Judge_Name TEXT,
+	Num_Cars INT,
+	Start DATETIME,
+	End DATETIME,
+	Duration INT,
+	Average INT
+	
+);
+INSERT INTO JudgesUpdate(Judge_ID,Judge_Name,Num_Cars,Start,End,Duration,Average)SELECT 
+Judge_ID, 
+Judge_Name, 
+COUNT(Timestamp) AS Num_Cars, 
+MIN(Timestamp) AS Start, 
+MAX(Timestamp) AS End,
+CAST(strftime('%f','MAX(Timestamp)')-strftime('%f','MIN(Timestamp)') AS INT)*60 AS Duration,
+CAST(strftime('%f','MAX(Timestamp)')-strftime('%f','MIN(Timestamp)') AS INT)*60/COUNT(Timestamp) AS Average
+FROM Judges GROUP BY Judge_ID;
+
+SELECT * FROM JudgesUpdate;
+
