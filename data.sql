@@ -98,8 +98,13 @@ INSERT INTO Cars(Car_ID,Year,Make,Model,Name,Email) SELECT Car_ID, Year, Make, M
 
 DELETE FROM Cars WHERE Car_ID='Car_ID';
 
-INSERT INTO Judges(Judge_ID,Judge_Name, Timestamp) SELECT Judge_ID, Judge_Name, Timestamp FROM CSVData WHERE 1;
+INSERT INTO Judges(Judge_ID,Judge_Name,Timestamp) SELECT Judge_ID, Judge_Name,Timestamp FROM CSVData WHERE 1;
 
+
+UPDATE Judges SET Timestamp = REPLACE(Timestamp,"/","-");
+UPDATE Judges SET Timestamp = substr(Timestamp,5,4)||"-0"||substr(Timestamp,1,2)||-0||substr(Timestamp,3,1)|| " "|| substr(Timestamp,10,5);
+
+  
 DELETE FROM Judges WHERE Judge_ID='Judge_ID';
 
 INSERT INTO Car_Score(Car_ID,Racer_Turbo,Racer_Supercharged,Racer_Performance,Racer_Horsepower,Car_Overall,Engine_Modifications,Engine_Performance,Engine_Chrome,Engine_Detailing,Engine_Cleanliness,Body_Frame_Undercarriage,Body_Frame_Suspension,Body_Frame_Chrome,Body_Frame_Detailing,Body_Frame_Cleanliness,Mods_Paint,Mods_Body ,Mods_Wrap,Mods_Rims,Mods_Interior,Mods_Other,Mods_ICE,Mods_Aftermarket,Mods_WIP,Mods_Overall) SELECT Car_ID,Racer_Turbo,Racer_Supercharged,Racer_Performance,Racer_Horsepower,Car_Overall,Engine_Modifications,Engine_Performance,Engine_Chrome,Engine_Detailing,Engine_Cleanliness,Body_Frame_Undercarriage,Body_Frame_Suspension,Body_Frame_Chrome,Body_Frame_Detailing,Body_Frame_Cleanliness,Mods_Paint,Mods_Body ,Mods_Wrap,Mods_Rims,Mods_Interior,Mods_Other,Mods_ICE,Mods_Aftermarket,Mods_WIP,Mods_Overall FROM CSVData WHERE 1;
@@ -151,15 +156,34 @@ CREATE TABLE Top3(
 	Rank INT
 );
 
-INSERT INTO Top3(Make,Car_ID,Total,Rank)SELECT Make,Car_ID,Total,Rank FROM Ranking;
+DROP TABLE IF EXISTS Top3Unsorted;
+CREATE TABLE Top3Unsorted(
+	Make TEXT,
+	Car_ID TEXT,
+	Total INT,
+	Rank INT
+
+);
+INSERT INTO Top3Unsorted(Make, Car_ID, Total,Rank ) SELECT Make, Car_ID ,Total, MIN(Rank)AS Rank FROM Ranking GROUP BY Make ORDER BY Make,Total DESC;
+
+DELETE FROM Ranking WHERE EXISTS (SELECT * FROM Top3Unsorted  WHERE Top3Unsorted.Rank=Ranking.Rank);
+
+INSERT INTO Top3Unsorted(Make, Car_ID, Total,Rank ) SELECT Make, Car_ID ,Total, MIN(Rank)AS Rank FROM Ranking GROUP BY Make ORDER BY Make,Total DESC;
+
+DELETE FROM Ranking WHERE EXISTS (SELECT * FROM Top3Unsorted  WHERE Top3Unsorted.Rank=Ranking.Rank);
+
+INSERT INTO Top3Unsorted(Make, Car_ID, Total,Rank ) SELECT Make, Car_ID ,Total, MIN(Rank)AS Rank FROM Ranking GROUP BY Make ORDER BY Make,Total DESC;
+
+DELETE FROM Ranking WHERE EXISTS (SELECT * FROM Top3Unsorted  WHERE Top3Unsorted.Rank=Ranking.Rank);
+
+INSERT INTO Top3(Make, Car_ID, Total,Rank) SELECT Make,Car_ID,Total,Rank FROM Top3Unsorted ORDER BY Make,Rank ASC;
+
 .headers ON
 .mode csv
 .output extract2.csv
 SELECT * FROM Top3;
 
-.headers ON
-.mode csv
-.output extract3.csv
+
 
 DROP TABLE IF EXISTS JudgesUpdate;
 CREATE TABLE JudgesUpdate(
@@ -168,8 +192,8 @@ CREATE TABLE JudgesUpdate(
 	Num_Cars INT,
 	Start DATETIME,
 	End DATETIME,
-	Duration INT,
-	Average INT
+	Duration FLOAT,
+	Average FLOAT
 	
 );
 INSERT INTO JudgesUpdate(Judge_ID,Judge_Name,Num_Cars,Start,End,Duration,Average)SELECT 
@@ -178,9 +202,12 @@ Judge_Name,
 COUNT(Timestamp) AS Num_Cars, 
 MIN(Timestamp) AS Start, 
 MAX(Timestamp) AS End,
-CAST(strftime('%f','MAX(Timestamp)')-strftime('%f','MIN(Timestamp)') AS INT)*60 AS Duration,
-CAST(strftime('%f','MAX(Timestamp)')-strftime('%f','MIN(Timestamp)') AS INT)*60/COUNT(Timestamp) AS Average
+ROUND(CAST((julianday(MAX(Timestamp)) -julianday (MIN(Timestamp)))*24  AS FLOAT),2) AS Duration,
+ROUND(CAST(((julianday (MAX(Timestamp)) -julianday (MIN(Timestamp)))*24*60) AS FLOAT) / COUNT(Timestamp),2) AS  Average
 FROM Judges GROUP BY Judge_ID;
 
-SELECT * FROM JudgesUpdate;
 
+.headers ON
+.mode csv
+.output extract3.csv
+SELECT * FROM JudgesUpdate;
